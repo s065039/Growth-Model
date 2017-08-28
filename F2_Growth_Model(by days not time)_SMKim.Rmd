@@ -1,0 +1,376 @@
+---
+title: "414 F2 Growth data(by days, not time)"
+output:
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Exploring 414 F2 growth data
+- Summarizing and trying to set up growth models 
+
+```{r include=FALSE}
+#install.packages("tidyverse")
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(magrittr)
+library(modelr)
+```
+
+```{r message=FALSE}
+data <- read_csv("F2_Phenotype_Bnapus_all.csv") # file that was output from "Format_Additional_414_data.Rmd"
+head(data, n=3)
+sowing_date <- ymd("150909") # from "Additional F2 Data.xls"
+```
+
+```{r}
+data.t <- as_tibble(t(data[,-1])) 
+colnames(data.t) <- data$PHENOTYPE
+data.t$ID <- colnames(data)[-1] 
+data.t <- data.t %>% select(ID, everything())
+head(data.t, n=3)
+
+write_csv(data.t,"F2_Phenotype_Bnapus_formatted.csv") # will be kept for further analysis
+```
+
+### Leaf lobe phenotypes
+
+(These are measured from leaves 5 and 8.  Shinje says these are always the same).
+
+Criteria: at least 1cm long and when you fold it over touches petiole.
+
+Important for distinguishing different varieties (patent, etc).
+
+Characteristics of Plants Before Flowering
+Leaf—development of lobes: The leaves on the upper portion of the stem can show varying degrees of development of lobes which are disconnected from one another along the petiole of the leaf. The degree of lobing is variety specific and can range from absent (no lobes)/weak through very strong (abundant lobes).
+(US Patent US6489543)
+
+Generally hight height number is good for drought tolerance.  Good for winter.  Not usually needed for summer, but good for summer in Mongolia.
+
+```{r}
+lobes <- data.t %>% select(ID, contains("lobe")) %>%
+  gather(key=date, value=lobe_number, -ID) %>%
+  mutate(date=str_replace(date, "lobe_number_","") %>% ymd() ) %>%
+  mutate(days=date-sowing_date) %>%
+  select(ID, days, lobe_number)
+head(lobes)
+```
+
+Plot & Modeling
+
+```{r warning=FALSE, message=FALSE}
+lobes %>% ggplot(aes(x=days, y=lobe_number, group=ID)) +
+  geom_line(alpha=.1) + 
+  ggtitle("414 lobe number by days - Full Data")
+
+# predictions
+lobes.mod <- lm(lobe_number ~ days, data = lobes)
+summary(lobes.mod)
+
+lobes %>%
+  add_predictions(lobes.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 3/4) +
+  geom_line(data=lobes, aes(x=days, y = lobe_number, group=ID), alpha=0.1) +
+  ggtitle("414 lobe number by days - Prediction")
+ 
+# residuals
+lobes %>%
+  add_residuals(lobes.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(aes(), alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, size = 0.5)
+  ggtitle("414 lobe number by days - Residuals")
+
+# Despite the low R-squared value, the residual plot appears to show fairly random noises, indicating that this model did not capture the pattern of the data set not so badly.
+```
+```{r}
+# create a dataframe with lobe_number=0 at time=0(sowing date)
+lobes0 <- lobes %>% 
+  data.frame() %>% #copy lobes
+  filter(days=="110") %>% # to filter unique IDs
+  mutate(days=0, lobe_number=0) %>% 
+  rbind(lobes) 
+head(lobes0) # data frame including data at time=0
+```
+```{r warning=FALSE, message=FALSE}
+lobes0 %>% ggplot(aes(x=days, y=lobe_number, group=ID)) +
+  geom_line(alpha=.1) + 
+  ggtitle("414 lobe number by days - Full Data")
+
+# predictions
+lobes0.mod <- lm(lobe_number ~ days, data = lobes0)
+summary(lobes0.mod)
+
+lobes0 %>%
+  add_predictions(lobes0.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 3/4) +
+  geom_line(data=lobes0, aes(x=days, y = lobe_number, group=ID), alpha=0.1) +
+  ggtitle("414 lobe number by days - Prediction")
+ 
+# residuals
+lobes0 %>%
+  add_residuals(lobes0.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_line(aes(group=ID), alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, size = 0.5)
+  ggtitle("414 lobe number by days - Residuals")
+
+# Not improved compared to previous analysis
+```
+
+
+
+### Leaf number phenotypes
+
+```{r}
+leafs <- data.t %>% select(ID, contains("leaf")) %>%
+  gather(key=date, value=leaf_number, -ID) %>%
+  mutate(date=str_replace(date, "leaf_number_","") %>% ymd() ) %>%
+  mutate(days=date-sowing_date) %>%
+  select(ID, days, leaf_number)
+head(leafs)
+```
+
+
+Plot & Modeling
+
+```{r}
+leafs %>% ggplot(aes(x=days, y=leaf_number,group=ID)) +
+  geom_line(alpha=.1) + 
+  ggtitle("414 lobe number by days - Full Data")
+
+# predictions
+leafs.mod <- lm(leaf_number ~ days, data = leafs)
+summary(leafs.mod)
+
+leafs %>% 
+  add_predictions(leafs.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(data=leafs, aes(x=days, y=leaf_number, group=ID), alpha=.1) +
+  ggtitle("414 leaf number by days - Prediction")
+
+# residuals
+leafs %>%
+  add_residuals(leafs.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, size = 0.5) +
+  ggtitle("414 leaf number by date - Residuals")
+
+# Despite the low R-squared value, the residual plot appears to show fairly random noises, indicating that this model did not capture the pattern of the data set not so badly.
+```
+```{r}
+# create a dataframe with leaf_number=0 at time=0(sowing date)
+leafs0 <- leafs %>% 
+  data.frame() %>% #copy lobes
+  filter(days=="110") %>% # to filter unique IDs
+  mutate(days=0, leaf_number=0) %>% 
+  rbind(leafs) 
+head(leafs0) # data frame including data at time=0
+```
+```{r}
+leafs0 %>% ggplot(aes(x=days, y=leaf_number,group=ID)) +
+  geom_line(alpha=.1) + 
+  ggtitle("414 lobe number by days - Full Data")
+
+# predictions
+leafs0.mod <- lm(leaf_number ~ days, data = leafs0)
+summary(leafs0.mod)
+
+leafs0 %>% 
+  add_predictions(leafs0.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(data=leafs0, aes(x=days, y=leaf_number, group=ID), alpha=.1) +
+  ggtitle("414 leaf number by days - Prediction")
+
+# residuals
+leafs0 %>%
+  add_residuals(leafs0.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, size = 0.5) +
+  ggtitle("414 leaf number by date - Residuals")
+
+# Failed to the pattern of the data set - low R-squared value and non-random distributed noises.
+```
+
+
+## Plant height phenotypes
+
+```{r}
+heights <- data.t %>% select(ID, contains("height")) %>%
+  gather(key=date, value=height, -ID) %>%
+  mutate(date=str_replace(date, "plant_height_","") %>% ymd() ) %>%
+  mutate(days=date-sowing_date) %>%
+  select(ID, days, height)
+head(heights)
+```
+
+Plot & Modeling
+
+```{r}
+heights %>% ggplot(aes(x=days, y=height, group=ID)) +
+  geom_line(alpha=.1) + 
+  ggtitle("414 height by days - Full Data")
+
+heights.mod <- lm(height ~ days, data = heights)
+coef(heights.mod)
+
+# predictions
+heights.mod <- lm(height ~ days, data = heights)
+summary(heights.mod)
+
+heights %>% 
+  add_predictions(heights.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(data=heights, aes(x=days, y=height, group=ID), alpha=.1) +
+  ggtitle("414 height by days - Prediction")
+
+# residuals
+heights %>%
+  add_residuals(heights.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, size = 0.5) +
+  ggtitle("414 height by days - Residuals")
+
+# Despite not so low R-squared value, the residual plot appears not to show  random noises, indicating that this model needs to be improved.  
+```
+
+```{r}
+# To create a dataframe with height=0 at time=0(sowing date)
+heights0 <- heights %>% 
+  data.frame() %>% #copy heights
+  filter(days=="247") %>% #filter unique IDs
+  mutate(days=0, height=0) %>% 
+  rbind(heights) 
+head(heights0) #data frame including data at time=0
+```
+```{r}
+heights0 %>% ggplot(aes(x=days, y=height, group=ID)) +
+  geom_line(alpha=.1) + 
+  ggtitle("414 height by days - Full Data")
+
+heights0.mod <- lm(height ~ days, data = heights0)
+coef(heights0.mod)
+
+# predictions
+heights0.mod <- lm(height ~ days, data = heights0)
+summary(heights0.mod)
+
+heights0 %>% 
+  add_predictions(heights0.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(data=heights0, aes(x=days, y=height, group=ID), alpha=.1) +
+  ggtitle("414 height by days - Prediction")
+
+# residuals
+heights0 %>%
+  add_residuals(heights0.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, size = 0.5) +
+  ggtitle("414 height by days - Residuals")
+
+# It doesn't like random noise, suggesting the model has not done a good job capturing in the dataset.
+```
+
+
+
+
+
+
+## Plant width phenotypes
+
+```{r}
+widths <- data.t %>% select(ID, contains("width")) %>%
+  gather(key=date, value=width, -ID) %>%
+  mutate(date=str_replace(date, "plant_width_","") %>% ymd() ) %>%
+  mutate(days=date-sowing_date) %>%
+  select(ID, days, width)
+head(widths)
+```
+
+
+
+ 
+Plot & Modeling
+
+```{r}
+widths %>% ggplot(aes(x=days, y=width,group=ID)) +
+  geom_line(alpha=.1) + ggtitle("414 width by days")
+
+# predictions
+widths.mod <- lm(width ~ days, data = widths)
+summary(widths.mod)
+
+widths %>% 
+  add_predictions(widths.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(data=widths, aes(x=days, y=width, group=ID), alpha=.1) +
+  ggtitle("414 width by days - Prediction")
+
+# Residuals
+widths %>%
+  add_residuals(widths.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype =2, size = 0.5) +
+  ggtitle("414 width by days - Residuals")
+
+# Despite the very low R-squared value, the residual plot seems to show the fairly random distribution of noises.   
+```
+```{r}
+# To create a dataframe with width=0 at time=0(sowing date)
+widths0 <- widths %>% 
+  data.frame() %>% #copy widths
+  filter(days=="100") %>% #filter unique IDs
+  mutate(days=0, width=0) %>% 
+  rbind(widths) 
+head(widths0) #data frame including data at time=0
+```
+```{r}
+widths0 %>% ggplot(aes(x=days, y=width,group=ID)) +
+  geom_line(alpha=.1) + ggtitle("414 width by days")
+
+# predictions
+widths0.mod <- lm(width ~ days, data = widths0)
+summary(widths0.mod)
+
+widths0 %>% 
+  add_predictions(widths0.mod) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(data=widths0, aes(x=days, y=width, group=ID), alpha=.1) +
+  ggtitle("414 width by days - Prediction")
+
+# Residuals
+widths0 %>%
+  add_residuals(widths0.mod) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype =2, size = 0.5) +
+  ggtitle("414 width by days - Residuals")
+
+# Dramatically increased R-squared value and fairly random distribution of noises in the residual plot.
+```
+
+
