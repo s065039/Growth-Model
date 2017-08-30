@@ -366,7 +366,7 @@ residual(lobe.croot.mod)
 
 ![](F2_Growth_Model_transformed_SMKim_files/figure-html/unnamed-chunk-5-4.png)<!-- -->
 
-After transforming the data, R-squared values didn't get changed a lot but the distribution of noises at the residual plots got worse.
+After transforming the data, R-squared values didn't get changed a lot and the distribution of noises at the residual plots got worse.
 
 ### Leaf number phenotypes
 
@@ -704,7 +704,7 @@ residual(leaf.croot.mod)
 
 ![](F2_Growth_Model_transformed_SMKim_files/figure-html/unnamed-chunk-8-4.png)<!-- -->
 
-After transforming the data, R-squared values didn't get changed a lot but the distribution of noises at the residual plots got worse.
+After transforming the data, the R-squared values and the noise distribution on the remaining plots did not change.
 
 
 ## Plant height phenotypes
@@ -951,7 +951,9 @@ residual(height.croot.mod)
 ```
 
 ![](F2_Growth_Model_transformed_SMKim_files/figure-html/unnamed-chunk-11-4.png)<!-- -->
-R-squared values got higher by including tha data of days=0 and height=0, but the noises were still not randomly distributed at the residual plots.
+
+After including the data of days=0 and height=0, the R = squared value got higher but the noise was still not randomly distributed in the residual plots.
+By transforming the data the R = squared value got higher but the noise was still not randomly distributed in the residual plots.
 
 ### Plant width phenotypes
 
@@ -1197,6 +1199,7 @@ residual(width.croot.mod)
 ```
 
 ![](F2_Growth_Model_transformed_SMKim_files/figure-html/unnamed-chunk-14-4.png)<!-- -->
+
 By including the data of days=0 and width=0, R-squared values got dramatically increased but distribution of noises got worse in the residual plot. However, untransformed data set showed quite random distribution of noises at residual plot.
 
 
