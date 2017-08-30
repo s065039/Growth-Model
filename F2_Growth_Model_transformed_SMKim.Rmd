@@ -1,0 +1,270 @@
+---
+title: "414 F2 Growth data_transformed"
+output:
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Exploring 414 F2 growth data
+- Summarizing and trying to set up growth models through transforming data set
+
+```{r include=FALSE}
+#install.packages("tidyverse")
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(magrittr)
+library(modelr)
+```
+
+```{r}
+load("414 F2 Growth data.RData")
+```
+
+### Leaf lobe phenotypes
+
+(These are measured from leaves 5 and 8.  Shinje says these are always the same).
+
+Criteria: at least 1cm long and when you fold it over touches petiole.
+
+Important for distinguishing different varieties (patent, etc).
+
+Characteristics of Plants Before Flowering
+Leaf—development of lobes: The leaves on the upper portion of the stem can show varying degrees of development of lobes which are disconnected from one another along the petiole of the leaf. The degree of lobing is variety specific and can range from absent (no lobes)/weak through very strong (abundant lobes).
+(US Patent US6489543)
+
+Generally hight height number is good for drought tolerance.  Good for winter.  Not usually needed for summer, but good for summer in Mongolia.
+
+
+```{r}
+lobes.transformed <- lobes %>% mutate(lobe_number_log=log(lobe_number+1), lobe_number_sqrt=sqrt(lobe_number+1), lobe_number_croot= sign(lobe_number)*abs(lobe_number+1)^(1/3))
+head(lobes.transformed)
+
+sapply(colnames(lobes.transformed)[3:6], function(x)  summary(lobes.transformed[,x])) 
+
+#tmp <- list()
+#for (i in colnames(lobes.transformed)[3:6]) {
+#  tmp[[i]] <- summary(lobes.transformed[,i])
+#}
+#tmp
+```
+##### predictions
+```{r}
+lobe.num.mod <- lm(lobe_number ~ days, data = lobes.transformed)
+summary(lobe.num.mod)
+lobe.log.mod <- lm(lobe_number_log ~ days, data = lobes.transformed)
+summary(lobe.log.mod)
+lobe.sqrt.mod <- lm(lobe_number_sqrt ~ days, data = lobes.transformed)
+summary(lobe.sqrt.mod)
+lobe.croot.mod <- lm(lobe_number_croot ~ days, data = lobes.transformed)
+summary(lobe.croot.mod)
+
+predicted <- function(mods, transforms) {
+lobes.transformed %>% 
+   add_predictions(mods) %>%
+   ggplot() +
+   geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+   geom_line(aes(x=days, y=transforms, group=ID), alpha=.1) +
+   ggtitle("414 lobe numbers by days - Prediction")
+}
+
+predicted(lobe.num.mod, lobes.transformed$lobe_number)
+predicted(lobe.log.mod, lobes.transformed$lobe_number_log)
+predicted(lobe.sqrt.mod, lobes.transformed$lobe_number_sqrt)
+predicted(lobe.croot.mod, lobes.transformed$lobe_number_croot)
+```
+##### residuals
+```{r}
+
+residual <- function (mods) {
+lobes.transformed %>%
+  add_residuals(mods) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype =2, size = 0.5) +
+  ggtitle("414 lobe numbers by days - Residuals")
+}
+
+residual(lobe.num.mod)
+residual(lobe.log.mod)
+residual(lobe.sqrt.mod)
+residual(lobe.croot.mod)
+```
+
+After transforming the data, R-squared values didn't get changed a lot but the distribution of noises at the residual plots got worse.
+
+### Leaf number phenotypes
+
+```{r warning=FALSE, message=FALSE}
+leafs.transformed <- leafs %>% mutate(leaf_number_log=log(leaf_number+1), leaf_number_sqrt=sqrt(leaf_number), leaf_number_croot= sign(leaf_number)*abs(leaf_number)^(1/3))
+head(leafs.transformed)
+
+sapply(colnames(leafs.transformed)[3:6], function(x)  summary(leafs.transformed[,x])) 
+```
+
+##### predictions
+```{r}
+leaf.num.mod <- lm(leaf_number ~ days, data = leafs.transformed)
+summary(leaf.num.mod)
+leaf.log.mod <- lm(leaf_number_log ~ days, data = leafs.transformed)
+summary(leaf.log.mod)
+leaf.sqrt.mod <- lm(leaf_number_sqrt ~ days, data = leafs.transformed)
+summary(leaf.sqrt.mod)
+leaf.croot.mod <- lm(leaf_number_croot ~ days, data = leafs.transformed)
+summary(leaf.croot.mod)
+
+predicted <- function(mods, transforms) {
+lobes.transformed %>% 
+   add_predictions(mods) %>%
+   ggplot() +
+   geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+   geom_line(aes(x=days, y=transforms, group=ID), alpha=.1) +
+   ggtitle("414 lobe numbers by days - Prediction")
+}
+
+predicted(leaf.num.mod, leafs.transformed$leaf_number)
+predicted(leaf.log.mod, leafs.transformed$leaf_number_log)
+predicted(leaf.sqrt.mod, leafs.transformed$leaf_number_sqrt)
+predicted(leaf.croot.mod, leafs.transformed$leaf_number_croot)
+```
+
+##### residuals
+```{r}
+residual <- function (mods) {
+leafs.transformed %>%
+  add_residuals(mods) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype =2, size = 0.5) +
+  ggtitle("414 leaf numbers by days - Residuals")
+}
+
+residual(leaf.num.mod)
+residual(leaf.log.mod)
+residual(leaf.sqrt.mod)
+residual(leaf.croot.mod)
+```
+
+After transforming the data, R-squared values didn't get changed a lot but the distribution of noises at the residual plots got worse.
+
+
+## Plant height phenotypes
+
+```{r warning=FALSE, message=FALSE}
+heights.transformed <- heights0 %>% mutate(height_log=log(height+1), height_sqrt=sqrt(height), height_croot= sign(height)*abs(height)^(1/3))
+head(heights.transformed)
+summary(heights.transformed$height)
+summary(heights.transformed$height_log)
+summary(heights.transformed$height_sqrt)
+summary(heights.transformed$height_croot)
+```
+
+##### predictions
+```{r}
+
+height.mod <- lm(height ~ days, data = heights.transformed)
+summary(height.mod)
+height.log.mod <- lm(height_log ~ days, data = heights.transformed)
+summary(height.log.mod)
+height.sqrt.mod <- lm(height_sqrt ~ days, data = heights.transformed)
+summary(height.sqrt.mod)
+height.croot.mod <- lm(height_croot ~ days, data = heights.transformed)
+summary(height.croot.mod)
+
+predicted <- function(mods, transforms) {
+heights.transformed %>% 
+  add_predictions(mods) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(aes(x=days, y=transforms, group=ID), alpha=.1) +
+  ggtitle("414 height by days - Prediction")
+}
+
+predicted(height.mod, heights.transformed$height)
+predicted(height.log.mod, heights.transformed$height_log)
+predicted(height.sqrt.mod, heights.transformed$height_sqrt)
+predicted(height.croot.mod, heights.transformed$height_croot)
+```
+
+##### residuals
+```{r}
+residual <- function (mods) {
+heights.transformed %>%
+  add_residuals(mods) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype =2, size = 0.5) +
+  ggtitle("414 leaf numbers by days - Residuals")
+}
+
+residual(height.mod)
+residual(height.log.mod)
+residual(height.sqrt.mod)
+residual(height.croot.mod)
+```
+R-squared values got higher by including tha data of days=0 and height=0, but the noises were still not randomly distributed at the residual plots.
+
+### Plant width phenotypes
+
+```{r}
+widths.transformed <- widths0 %>% mutate(width_log=log10(width+1), width_sqrt=sqrt(width), width_croot= sign(width)*abs(width)^(1/3))
+head(widths.transformed)
+summary(widths.transformed$width)
+summary(widths.transformed$width_log)
+summary(widths.transformed$width_sqrt)
+summary(widths.transformed$width_croot)
+```
+
+# predictions
+```{r}
+width.mod <- lm(width ~ days, data = widths.transformed)
+summary(width.mod)
+width.log.mod <- lm(width_log ~ days, data = widths.transformed)
+summary(width.log.mod)
+width.sqrt.mod <- lm(width_sqrt ~ days, data = widths.transformed)
+summary(width.sqrt.mod)
+width.croot.mod <- lm(width_croot ~ days, data = widths.transformed)
+summary(width.croot.mod)
+
+predicted <- function(mods, transforms) {
+widths.transformed %>% 
+  add_predictions(mods) %>%
+  ggplot() +
+  geom_line(aes(x=days, y = pred), colour = "red", size = 0.5) +
+  geom_line(aes(x=days, y=transforms, group=ID), alpha=.1) +
+  ggtitle("414 width by days - Prediction")
+}
+
+predicted(width.mod, widths.transformed$width)
+predicted(width.log.mod, widths.transformed$width_log)
+predicted(width.sqrt.mod, widths.transformed$width_sqrt)
+predicted(width.croot.mod, widths.transformed$width_croot)
+```
+
+# Residuals
+```{r}
+residual <- function (mods) {
+widths.transformed %>%
+  add_residuals(mods) %>%
+  ggplot(aes(days, resid)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0, colour = "red", linetype =2, size = 0.5) +
+  ggtitle("414 leaf numbers by days - Residuals")
+}
+
+residual(width.mod)
+residual(width.log.mod)
+residual(width.sqrt.mod)
+residual(width.croot.mod)
+```
+By including the data of days=0 and width=0, R-squared values got dramatically increased but distribution of noises got worse in the residual plot. However, untransformed data set showed quite random distribution of noises at residual plot.
+
+
+
