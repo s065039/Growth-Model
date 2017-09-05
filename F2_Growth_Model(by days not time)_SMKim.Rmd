@@ -56,7 +56,7 @@ lobes <- data.t %>% select(ID, contains("lobe")) %>%
   mutate(date=str_replace(date, "lobe_number_","") %>% ymd() ) %>%
   mutate(days=date-sowing_date) %>%
   select(ID, days, lobe_number)
-head(lobes)
+lobes
 ```
 
 Plot & Modeling
@@ -259,6 +259,7 @@ heights0 <- heights %>%
   rbind(heights) 
 head(heights0) #data frame including data at time=0
 ```
+
 ```{r}
 heights0 %>% ggplot(aes(x=days, y=height, group=ID)) +
   geom_line(alpha=.1) + 
@@ -337,6 +338,7 @@ widths %>%
 
 # Despite the very low R-squared value, the residual plot seems to show the fairly random distribution of noises.   
 ```
+
 ```{r}
 # To create a dataframe with width=0 at time=0(sowing date)
 widths0 <- widths %>% 
@@ -346,6 +348,7 @@ widths0 <- widths %>%
   rbind(widths) 
 head(widths0) #data frame including data at time=0
 ```
+
 ```{r}
 widths0 %>% ggplot(aes(x=days, y=width,group=ID)) +
   geom_line(alpha=.1) + ggtitle("414 width by days")
